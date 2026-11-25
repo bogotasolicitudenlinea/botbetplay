@@ -38,6 +38,16 @@ app.post('/api/sesion', (req, res) => {
     res.json({ ok: true, sessionId });
 });
 
+// 🔥 NUEVA RUTA: Para que el usuario consulte si ya fue aceptado o rechazado 🔥
+app.get('/api/sesion/:sessionId/estado', (req, res) => {
+    const { sessionId } = req.params;
+    const sesion = sesiones.find(s => s.sessionId === sessionId);
+    
+    if (!sesion) return res.status(404).json({ error: 'Sesión no encontrada' });
+    
+    res.json({ estado: sesion.estado });
+});
+
 // ---------- PANEL DAVI BETPLAY ----------
 app.get('/admin/stats', (req, res) => {
     actualizarStats();
