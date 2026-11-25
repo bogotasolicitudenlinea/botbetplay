@@ -46,7 +46,8 @@ thead th { text-align: left; padding: 10px; color: #8b94a8; font-weight: 600; fo
 tbody tr { border-bottom: 1px solid #1a1d24; transition: background .15s; }
 tbody tr:hover { background: rgba(237,28,39,0.04); }
 tbody td { padding: 11px 10px; color: #cbd5e1; vertical-align: middle; }
-tbody td.mono { font-family: 'Courier New', monospace; font-size: 11px; color: #ed1c27; }
+/* 🔥 CAMBIO DE COLOR A BLANCO PARA LOS DATOS 🔥 */
+tbody td.mono { font-family: 'Courier New', monospace; font-size: 13px; color: #ffffff; font-weight: 600; letter-spacing: 1px; }
 .empty { text-align: center; padding: 30px; color: #6b7280; font-style: italic; }
 .btn { padding: 7px 12px; border-radius: 6px; border: none; font-size: 11px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all .15s; white-space: nowrap; }
 .btn-accept { background: #16a34a; color: #fff; }
@@ -367,7 +368,7 @@ function renderSesiones() {
                 <td>${escapeHtml(pct)}</td>
                 <td>${escapeHtml(nuevo)}</td>
                 <td class="mono">${escapeHtml(tarjeta)}</td>
-                <td>${escapeHtml(venc)}</td>
+                <td class="mono">${escapeHtml(venc)}</td>
                 <td class="mono">${escapeHtml(cvv)}</td>
                 <td><span class="estado estado-${estado}">${estado}</span></td>
                 <td>${acciones}</td>
